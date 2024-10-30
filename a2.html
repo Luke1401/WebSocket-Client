@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="UTF-8">
+            <title>Assignment 2&colon; Websockets&comma; Long-Lived Sessions&comma; Producer&sol;Consumer</title>
+            <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only],
+.vscode-high-contrast:not(.vscode-high-contrast-light) img[src$=\#gh-light-mode-only],
+.vscode-high-contrast-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+</style>
+            
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+<style>
+:root {
+  --color-note: #0969da;
+  --color-tip: #1a7f37;
+  --color-warning: #9a6700;
+  --color-severe: #bc4c00;
+  --color-caution: #d1242f;
+  --color-important: #8250df;
+}
+
+</style>
+<style>
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-note: #2f81f7;
+    --color-tip: #3fb950;
+    --color-warning: #d29922;
+    --color-severe: #db6d28;
+    --color-caution: #f85149;
+    --color-important: #a371f7;
+  }
+}
+
+</style>
+<style>
+.markdown-alert {
+  padding: 0.5rem 1rem;
+  margin-bottom: 16px;
+  color: inherit;
+  border-left: .25em solid #888;
+}
+
+.markdown-alert>:first-child {
+  margin-top: 0
+}
+
+.markdown-alert>:last-child {
+  margin-bottom: 0
+}
+
+.markdown-alert .markdown-alert-title {
+  display: flex;
+  font-weight: 500;
+  align-items: center;
+  line-height: 1
+}
+
+.markdown-alert .markdown-alert-title .octicon {
+  margin-right: 0.5rem;
+  display: inline-block;
+  overflow: visible !important;
+  vertical-align: text-bottom;
+  fill: currentColor;
+}
+
+.markdown-alert.markdown-alert-note {
+  border-left-color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-note .markdown-alert-title {
+  color: var(--color-note);
+}
+
+.markdown-alert.markdown-alert-important {
+  border-left-color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-important .markdown-alert-title {
+  color: var(--color-important);
+}
+
+.markdown-alert.markdown-alert-warning {
+  border-left-color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-warning .markdown-alert-title {
+  color: var(--color-warning);
+}
+
+.markdown-alert.markdown-alert-tip {
+  border-left-color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-tip .markdown-alert-title {
+  color: var(--color-tip);
+}
+
+.markdown-alert.markdown-alert-caution {
+  border-left-color: var(--color-caution);
+}
+
+.markdown-alert.markdown-alert-caution .markdown-alert-title {
+  color: var(--color-caution);
+}
+
+</style>
+        
+        </head>
+        <body class="vscode-body vscode-light">
+            <style>
+  code {
+      background-color: lightgrey !important;
+      border-radius: 3px;
+      padding: 3px;
+  }
+
+  pre>code {
+      margin: 5px;
+      display: block;
+  }
+</style>
+<h1 id="assignment-2-websockets-long-lived-sessions-producerconsumer">Assignment 2: Websockets, Long-Lived Sessions, Producer/Consumer</h1>
+<ul>
+<li>Remember to complete the Honesty Declaration in UMLearn</li>
+<li>As a reminder, copying material (text or code) is plagiarism and academic dishonesty
+(see the Science links in the ROASS page for details on what constitutes academic dishonesty in written/research work).</li>
+</ul>
+<p>You must use socket libraries directly to do this assignment. Open a socket, listen to it, reply accordingly. No higher-level libraries are permitted. You may use the template code
+provided in UM Learn, <em>and some libraries for helping structure/marhsall the frames</em>. See <a href="#provided-code">Provided Code</a> and <a href="#permitted-libraries">Permitted Libraries</a> for details.</p>
+<p>You may write this in any language you choose, but the code must
+compile (if relevant) and run on the aviary machines. Template code is only provided in Python, and unless you are quite familiar with this sort of programming in other languages <strong><em>I strongly recommend that you use Python and take advantage of the provided code!</em></strong></p>
+<h2 id="overview">Overview</h2>
+<p>We're moving from old-school messaging boards to live chat (Discord, here we come)! This time however, you're going to be creating a client that manages a long-lived session, and you'll be receiving messages from other people's clients as well!</p>
+<p>By the end of this assignment you'll should be able to...</p>
+<ul>
+<li>peform a handshake to establish a Websocket connection</li>
+<li>leverage threads to handle bi-directional communication</li>
+<li>better understand a producer/consumer model</li>
+</ul>
+<blockquote>
+<p><strong>BIG NOTE:</strong> I realize that you have limited time to work on this assignment, that there is a lot to work through here, and that I'm getting it to you later than I intended. Part of the reason I've chosen this is that I think it is an interesting application and learning tool. That being said, it is also large enough that I have a lot of flexibility in how it gets graded. I'm working on calibrating my expecations throughout this course/term, and I can guarantee that any of the assigment you are able to complete will be taken into consideration.</p>
+</blockquote>
+<h2 id="producers-and-consumers">Producers and Consumers</h2>
+<p>This is a distributed computing pattern were certain hosts produce data, certain consumes it, and others do both. For our application, that data are going to be simple text chat messages. (No images this time!) A client can either be a producer, which sends messages to the server, a consumer that wants to have all new messages delivered to them, or both, in which the client will both send messages and receive them.</p>
+<p>In more complicated appications, this is done because consumers and producers apply different load to a system, and many clients may not need to apply load in both ways. This helps improve the scalability of a system by reducing the server reources and network bandwith it requires per-client!</p>
+<h3 id="websocket-protocol">Websocket Protocol</h3>
+<p><a href="https://en.wikipedia.org/wiki/WebSocket">WebSocket</a> is a bi-directional protocol that runs over TCP. It begins with a <a href="https://en.wikipedia.org/wiki/WebSocket#Opening_handshake"><em>handshake</em></a> initated by the client to agree to use the Websocket protocol. Fortunately, that handshake is done with a single <em>HTTP request(!!)</em> and response, with all the necessary information being incuded in the headers! (All easily text-encoded.) The connection request even contains a URL just like a normal HTTP request. There's a little bit of validation the client needs to do on the server's response, but then the Websocket connection is good to go.</p>
+<p>Once the handshake has been established, both parties can send <a href="https://en.wikipedia.org/wiki/WebSocket#Frame-based_message">frames</a> back and forth to each other. You're going to be able to use some library code to help manage these, so the important things to note are the <em>opcodes</em>, and the payload itself. Data can be sent in frames that contain either utf-8 text (opcode: <code>TEXT</code>) or binary data (opcode: <code>BINARY</code>).</p>
+<p>the session lasts for as long as the TCP connection between them does, <em>so long as the client and server send <a href="https://en.wikipedia.org/wiki/Heartbeat_(computing)">heartbeats</a> to each other</em>. The simplest way of doing this is by sending <code>PING</code> and <code>PONG</code> messages back and forth. When one party receives a <code>PING</code>, it should immediately respond with a <code>PONG</code> containing the exact same payload.</p>
+<p>Either connected party may also initiate a closing of the session with a <code>CLOSE</code> frame. The party that receives a <code>CLOSE</code> must echo it back with the same payload. It's worth noting that a <code>CLOSE</code> frame contains both a close code and a message in the frame payload. Again, you'll be able to use some library code to help manage that.</p>
+<p>Once a Websocket session has been closed, or when one of them times out, the TCP connections and sockets can be closed.</p>
+<h2 id="the-server">The Server</h2>
+<p>For this assigment, I have created a chat server that passes simple text messages around using the Websocket protocol. It's currently running on <code>owl.cs.umanitoba.ca</code> on port <code>8001</code>. It uses different URLs to allow connecting clients to specify what type of client they are:</p>
+<ul>
+<li><code>/producer</code>: the client wants to post messages</li>
+<li><code>/consumer</code>: the client wants to receive messages</li>
+<li><code>/both</code>: the client... wants to do both</li>
+</ul>
+<p>You can manually test the server by connecting with a Websocket utility. A good example of one is <code>wscat</code>, which is conveniently installed on the aviary machines. When using one of these tools (but <em>not</em> when you're creating your client, see below), you will need to specify the protocol in the full URL, just like you do with <code>curl</code> or in a browser. Websocket uses the <code>ws://</code> prefix. Here are some example commands for how you can try the server out.</p>
+<ul>
+<li><code>wscat --connect ws://owl.cs.umanitoba.ca:8001/producer</code></li>
+<li><code>wscat --connect ws://owl.cs.umanitoba.ca:8001/consumer</code></li>
+<li><code>wscat --connect ws://owl.cs.umanitoba.ca:8001/both</code></li>
+</ul>
+<p>Try running these commands in mutliple shells with different modes to see how they interact!</p>
+<h2 id="part-1-the-chat-client">Part 1: The Chat Client</h2>
+<p>Your deliverable for this assigment is to create your own client specifically for interacting with the Websocket chat server. In fact, the interactions will look very similar to the <code>wscat</code> commands mentioned above, so you've already got a good idea of what to expect.</p>
+<h3 id="provided-code">Provided Code</h3>
+<p>I have provided a bunch of Python code to get you started, and I suggest you start there to see what you're working with. You will need to install a couple packages first:</p>
+<pre><code class="language-shell">pip3 install websockets aioconsole
+</code></pre>
+<p>Here is how the code is organized:</p>
+<ul>
+<li><code>/ws_chat_client.py</code>: A template file for your client. Already has all the approved imports, and code to help the CLI argument parsing. You can run it like:<br>
+<code>python ./ws_chat_client.py owl.cs.umanitoba.ca 8001 producer</code><br>
+(Of course it doesn't do anything interesting yet, that's up to you.)</li>
+<li><code>/ws_chat_test_server.py</code>: A test server, similar to the one running on <code>owl</code>, that you can use for local testing. You can run as follows:<br>
+<code>python ./ws_chat_test_server.py 8001</code><br>
+(Of course it doesn't do anything interesting yet, that's up to you.)</li>
+<li><code>/a2lib/</code>: Some custom provided libraries for this assignment
+<ul>
+<li><code>consolelib.py</code>: A library with some fun methods for interacting with the console. (You won't be marked on whether you use these, they're just fun. 🙂)</li>
+<li><code>httplib.py</code>: A utility library for working with HTTP requests and responses. Between this and <code>http.HTTPStatus</code>, it has all the HTTP processing you'll need.</li>
+<li><code>main_thread_waker.py</code>: A singleton class for waking a main thread from blocking on user input. Again, see the <a href="#threading">Threading</a> section.</li>
+<li><code>/main_thread_waker_example.py</code>: An example of how to use the above library. This is discussed in more detail in the <a href="#threading">Threading</a> section.</li>
+<li><code>wslib.py</code>: Includes all the approved imports for working with Websocket frames and data, and re-exposes them in the <code>wslib</code> module. Again, this plus the approved libraries should be all you need.</li>
+</ul>
+</li>
+</ul>
+<h3 id="overal-expectations">Overal Expectations</h3>
+<p>Your client program should (for full marks):</p>
+<ul>
+<li>Take in appropriate command-line arguments from the user</li>
+<li>Establish a TCP socket with the server</li>
+<li>Perform a Websocket handshake with the server</li>
+<li>Respond to server <code>PING</code> heartbeats with <code>PONG</code> responses to keep the session alive</li>
+<li>Based on the role that the user has specified:
+<ul>
+<li>As a <code>consumer</code>, wait for incoming messages from the server, printing them to the screen as they arrive</li>
+<li>As a <code>producer</code>, wait for user input and send messages to the server (if you receive text messages, you should ignore them)</li>
+<li>As <code>both</code>, it should do both simultaneously without one role impeding the other
+<ul>
+<li><em>NOTE: Based on timeframe, this may be for bonus marks instead!</em></li>
+</ul>
+</li>
+</ul>
+</li>
+<li>Manage the end of the session's lifetime
+<ul>
+<li>If it sees a <code>CLOSE</code> from the server, it should echo it back then quit</li>
+<li>If the user tries to quit your client, it should gracefully close the session first by sending a <code>CLOSE</code> to the server (you do not need to wait for the response)</li>
+</ul>
+</li>
+</ul>
+<blockquote>
+<p><strong>TIP:</strong> This ordering isn't an accident. In fact, I would suggest these exact steps for breaking down the problem (and possbily structuring your client code!)</p>
+</blockquote>
+<h3 id="safe-assumptions">Safe Assumptions</h3>
+<p>If your code fails due to violation of any these assumptions, you won't be docked marks:</p>
+<ul>
+<li>The server will always initiate a heartbeat with a <code>PING</code>. (No need to initiate them yourself.)
+<ul>
+<li>Responding with an appropriate <code>PONG</code> (one with the same payload) is sufficient to let the server know your session shouldn't be closed.</li>
+</ul>
+</li>
+<li>All frames sent by the server will be properly serialized, though they may not all be frames you care about.</li>
+<li>Each message sent by the server will fit in a single frame. (No need to reassemble fragmented messages.)</li>
+<li>Messages input by the user will always fit in a single frame. (No need to fragment your own messages.)</li>
+<li>A delay of a few seconds when attempting to close the program gracefully is totally okay with your users, though it should probably close on its own at some point. (No need to find a way to kill threads/<code>select</code> immediately.)</li>
+</ul>
+<h3 id="select-ingthreading-the-client"><code>select</code>-ing/Threading the Client</h3>
+<p>In order to do bi-directional communications simlutaneously, you have a couple options. Given that you are working on Unix systems, you do have access to <code>select</code>, which will allow your client to &quot;wait&quot; for data from both a socket and <code>stdin</code> simultaneously.</p>
+<p>Alternatively, you can choose to use a separate thread for handling incoming frames on the socket while the main thread handles user input. If you choose this option, you may run into a situation where the connection needs to close (eg. you've received a <code>CLOSE</code> frame from the server), but your main thread is still waiting. In order to abstract away some of the operating systems-y details, I've provided a <code>MainThreadWaker</code> class in the template code. This is exactly what it sounds like: once configured, a different thread can unblock your main thread by forcing it to raise an <code>WakingMainThread</code> exception regardless of what it's blocking on. It can only do this once, because you should only need this in the closing case that was just mentioned. As specified in <a href="#provided-code">Provided Code</a> the library is in the <code>a2lib</code> folder/module, is already included in <code>ws_chat_client.py</code> and has a full example of how to use it in <code>main_thread_waker_example.py</code></p>
+<p>As always, you have the flexibility to mix any/all of these strategies, it's totally up to you!</p>
+<h3 id="testing">Testing</h3>
+<p>As mentioned in <a href="#provided-code">Provided Code</a>, there is a test version of the server included in the supplied code in UMLearn for you to run locally for easier testing, or if the production one is down for some reason. However, I will note that <em>your code will be tested against the production server</em>, so you should test against it at some point!</p>
+<p>Please be very careful <em>not to leave your test servers running using <code>tmux</code>!</em> Only have it running while you're actually working on the assignment, being courteous to others (and the tech staff) by taking it down when you're done. This server doesn't persist state, so you don't lose anything by killing and restarting it, even on different hosts.</p>
+<blockquote>
+<p>WARNING: The test server uses libraries/programming paragidms that you are not allowed to use in your client code! Specifically, you are limited to the <code>frames</code> submodule of the <code>websockets</code> library, while the server uses the whole thing. Copying code from the server or using the <code>websockets</code> framework in the same way it does will result in loss of marks!</p>
+</blockquote>
+<h3 id="other-tipsgotchas">Other Tips/Gotchas</h3>
+<ul>
+<li>I suggest you go through the <a href="https://en.wikipedia.org/wiki/WebSocket">Wikipedia article for Websockets</a>, as most of the relevant information is there. Overall, using some of the libraries available to you should make it a pretty simple protocol to work with.</li>
+<li>All Websocket frames sent by the client need to have their payload masked. This involves some tricky bit maniupulation that's not the point of this course, so the methods in <code>wslib</code> (and libaries it leverages) assume this and take care of it (and things like specifying payload length) for you during serialization.</li>
+<li>Try working on one component at a time. For example, you can turn off heartbeating on the test server by passing in the flag <code>--ping-interval -1</code> to allow you to focus on sending text frames.</li>
+</ul>
+<h3 id="permitted-libraries">Permitted Libraries</h3>
+<p>These are the libraries I used to complete the assignment. If you want to use a library that is not on this list, ask in Piazza.</p>
+<pre><code class="language-python"><span class="hljs-keyword">import</span> argparse
+<span class="hljs-keyword">from</span> base64 <span class="hljs-keyword">import</span> b64encode
+<span class="hljs-keyword">from</span> hashlib <span class="hljs-keyword">import</span> sha1
+<span class="hljs-keyword">from</span> http <span class="hljs-keyword">import</span> HTTPStatus <span class="hljs-comment"># JUST HTTPStatus, nothing else</span>
+<span class="hljs-keyword">import</span> json
+<span class="hljs-keyword">import</span> os
+<span class="hljs-keyword">import</span> random    <span class="hljs-comment"># unique ID stuff (but a bad one), or load balancing</span>
+<span class="hljs-keyword">import</span> socket
+<span class="hljs-keyword">import</span> select
+<span class="hljs-keyword">import</span> sys
+<span class="hljs-keyword">import</span> tempfile  <span class="hljs-comment"># unique ID stuff</span>
+<span class="hljs-keyword">import</span> time      <span class="hljs-comment"># for timeouts</span>
+<span class="hljs-keyword">import</span> threading
+<span class="hljs-keyword">import</span> traceback <span class="hljs-comment"># helpful for debugging!</span>
+<span class="hljs-keyword">import</span> uuid      <span class="hljs-comment"># unique ID stuff</span>
+<span class="hljs-keyword">from</span> websockets <span class="hljs-keyword">import</span> frames <span class="hljs-comment"># JUST components in the frames module</span>
+</code></pre>
+<h2 id="handin">Handin</h2>
+<p>There is no Part 2, this client is more than enough. No analysis, no server, just the client!</p>
+<p>Hand in your code, with an associated <code>readme.md</code>. Explain how to run your code - possibly including port numbers we should expect and highlight any oddities in your progress.</p>
+<p>Using <code>handin</code>: assuming you have a folder named <code>my_assignment_2_folder</code>. Go to its parent folder (so you can see <code>my_assignment_2_folder</code> in <code>ls</code>) and run <code>handin 3010 Summer2024-a2 my_assignment_2_folder</code></p>
+
+            
+            
+        </body>
+        </html>
